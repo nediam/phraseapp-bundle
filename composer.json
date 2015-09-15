@@ -1,0 +1,18 @@
+{
+    "name": "nediam/phraseapp-bundle",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Bartłomiej Kuleszewicz",
+            "email": "nediam@staramilosna.info"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "nediam\\PhraseAppBundle\\": ""
+        }
+    },
+    "require": {
+        "nediam/phraseapp-lib": "dev-master"
+    }
+}

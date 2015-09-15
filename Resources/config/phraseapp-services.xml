@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <service id="phrase_app.client" class="nediam\PhraseApp\PhraseAppClient" public="false">
+            <argument>%phrase_app.token%</argument>
+        </service>
+
+        <service id="phrase_app.service" class="nediam\PhraseAppBundle\Service\PhraseApp">
+            <argument id="phrase_app.client" type="service"/>
+            <argument id="translation.loader" type="service"/>
+            <argument id="translation.writer" type="service"/>
+            <argument>%phrase_app.config%</argument>
+        </service>
+    </services>
+
+</container>
