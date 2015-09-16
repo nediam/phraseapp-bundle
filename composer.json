@@ -13,6 +13,6 @@
         }
     },
     "require": {
-        "nediam/phraseapp-lib": "dev-master"
+        "nediam/phraseapp-lib": "^1.0"
     }
 }
