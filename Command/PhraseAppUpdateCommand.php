@@ -8,29 +8,19 @@ namespace nediam\PhraseAppBundle\Command;
 
 
 use nediam\PhraseAppBundle\Service\PhraseApp;
+use Psr\Log\LogLevel;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Translation\Catalogue\DiffOperation;
-use Symfony\Component\Translation\MessageCatalogue;
-use Symfony\Component\Translation\Writer\TranslationWriter;
 
 class PhraseAppUpdateCommand extends ContainerAwareCommand
 {
     private $availableLocales;
-    /** @var TranslationLoader */
-    private $loader;
-    /** @var TranslationWriter */
-    private $writer;
     /** @var PhraseApp */
     private $phraseApp;
-    /** @var string */
-    private $translationsPath;
-    /** @var string */
-    private $tmpPath;
     /** @var array */
     private $validators = [];
     /** @var array */
@@ -84,6 +74,17 @@ class PhraseAppUpdateCommand extends ContainerAwareCommand
         $container              = $this->getContainer();
         $this->phraseApp        = $container->get('phrase_app.service');
         $this->availableLocales = $this->phraseApp->getLocales();
+
+        $this->phraseApp->setLogger(new ConsoleLogger($output, [
+            LogLevel::EMERGENCY => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::ALERT     => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::CRITICAL  => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::ERROR     => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::WARNING   => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::NOTICE    => OutputInterface::VERBOSITY_NORMAL,
+            LogLevel::INFO      => OutputInterface::VERBOSITY_VERBOSE,
+            LogLevel::DEBUG     => OutputInterface::VERBOSITY_DEBUG,
+        ]));
 
         $unsupportedLocales = array_diff($this->locales, array_keys($this->availableLocales));
         if (count($unsupportedLocales)) {

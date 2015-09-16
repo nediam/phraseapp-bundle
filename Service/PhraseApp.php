@@ -8,13 +8,15 @@ namespace nediam\PhraseAppBundle\Service;
 
 
 use nediam\PhraseApp\PhraseAppClient;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
 use Symfony\Component\Translation\Catalogue\DiffOperation;
 use Symfony\Component\Translation\MessageCatalogue;
 use Symfony\Component\Translation\Writer\TranslationWriter;
 
-class PhraseApp
+class PhraseApp implements LoggerAwareInterface
 {
     /**
      * @var PhraseAppClient
@@ -52,6 +54,10 @@ class PhraseApp
      * @var array
      */
     private $downloadedLocales = [];
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * PhraseApp constructor.
@@ -59,9 +65,10 @@ class PhraseApp
      * @param PhraseAppClient   $client
      * @param TranslationLoader $translationLoader
      * @param TranslationWriter $translationWriter
+     * @param LoggerInterface   $logger
      * @param array             $config
      */
-    public function __construct(PhraseAppClient $client, TranslationLoader $translationLoader, TranslationWriter $translationWriter, array $config)
+    public function __construct(PhraseAppClient $client, TranslationLoader $translationLoader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null)
     {
         $this->client            = $client;
         $this->translationLoader = $translationLoader;
@@ -70,6 +77,19 @@ class PhraseApp
         $this->locales           = $config['locales'];
         $this->outputFormat      = $config['output_format'];
         $this->translationsPath  = $config['translations_path'];
+        $this->logger            = $logger;
+    }
+
+    /**
+     * Sets a logger instance on the object.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return null
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -123,12 +143,20 @@ class PhraseApp
         $tmpFile      = $this->getTmpPath() . '/' . 'messages.' . $targetLocale . '.yml';
 
         if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
+            $this->logger->notice(strtr('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
+                '{targetLocale}' => $targetLocale,
+                '{sourceLocale}' => $sourceLocale
+            ]));
             // Make copy because operated catalogues must belong to the same locale
             copy($this->downloadedLocales[$sourceLocale], $tmpFile);
 
             return $this->downloadedLocales[$sourceLocale];
         }
 
+        $this->logger->notice(strtr('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
+            '{targetLocale}' => $targetLocale,
+            '{sourceLocale}' => $sourceLocale
+        ]));
         $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'yml_symfony2');
         file_put_contents($tmpFile, $phraseAppMessage);
         $this->downloadedLocales[$sourceLocale] = $tmpFile;
@@ -142,10 +170,12 @@ class PhraseApp
     protected function dumpMessages($targetLocale)
     {
         // load downloaded messages
+        $this->logger->notice(strtr('Loading downloaded catalogues from "{tmpPath}"', ['{tmpPath}' => $this->getTmpPath()]));
         $extractedCatalogue = new MessageCatalogue($targetLocale);
         $this->translationLoader->loadMessages($this->getTmpPath(), $extractedCatalogue);
 
         // load any existing messages from the translation files
+        $this->logger->notice(strtr('Loading existing catalogues from "{translationsPath}"', ['{translationsPath}' => $this->translationsPath]));
         $currentCatalogue = new MessageCatalogue($targetLocale);
         $this->translationLoader->loadMessages($this->translationsPath, $currentCatalogue);
 
@@ -153,9 +183,12 @@ class PhraseApp
 
         // Exit if no messages found.
         if (0 === count($operation->getDomains())) {
+            $this->logger->warning(strtr('No translation found for locale {locale}', ['{locale}' => $targetLocale]));
+
             return;
         }
 
+        $this->logger->notice(strtr('Writing translation file for locale "{locale}".', ['{locale}' => $targetLocale]));
         $this->translationWriter->writeTranslations($operation->getResult(), $this->outputFormat, ['path' => $this->translationsPath]);
     }
 
