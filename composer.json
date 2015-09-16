@@ -1,6 +1,8 @@
 {
     "name": "nediam/phraseapp-bundle",
-    "minimum-stability": "dev",
+    "description": "Basic integration with phraseapp.com",
+    "minimum-stability": "stable",
+    "license": "MIT",
     "authors": [
         {
             "name": "Bartłomiej Kuleszewicz",
