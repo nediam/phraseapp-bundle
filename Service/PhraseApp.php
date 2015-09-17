@@ -145,20 +145,20 @@ class PhraseApp implements LoggerAwareInterface
         $tmpFile      = $this->getTmpPath() . '/' . 'messages.' . $targetLocale . '.yml';
 
         if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
-            $this->logger->notice(strtr('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
-                '{targetLocale}' => $targetLocale,
-                '{sourceLocale}' => $sourceLocale
-            ]));
+            $this->logger->notice('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
+                'targetLocale' => $targetLocale,
+                'sourceLocale' => $sourceLocale
+            ]);
             // Make copy because operated catalogues must belong to the same locale
             copy($this->downloadedLocales[$sourceLocale], $tmpFile);
 
             return $this->downloadedLocales[$sourceLocale];
         }
 
-        $this->logger->notice(strtr('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
-            '{targetLocale}' => $targetLocale,
-            '{sourceLocale}' => $sourceLocale
-        ]));
+        $this->logger->notice('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
+            'targetLocale' => $targetLocale,
+            'sourceLocale' => $sourceLocale
+        ]);
         $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'yml_symfony2');
         file_put_contents($tmpFile, $phraseAppMessage);
         $this->downloadedLocales[$sourceLocale] = $tmpFile;
@@ -172,25 +172,25 @@ class PhraseApp implements LoggerAwareInterface
     protected function dumpMessages($targetLocale)
     {
         // load downloaded messages
-        $this->logger->notice(strtr('Loading downloaded catalogues from "{tmpPath}"', ['{tmpPath}' => $this->getTmpPath()]));
+        $this->logger->notice('Loading downloaded catalogues from "{tmpPath}"', ['tmpPath' => $this->getTmpPath()]);
         $extractedCatalogue = new MessageCatalogue($targetLocale);
         $this->translationLoader->loadMessages($this->getTmpPath(), $extractedCatalogue);
 
         // load any existing messages from the translation files
-        $this->logger->notice(strtr('Loading existing catalogues from "{translationsPath}"', ['{translationsPath}' => $this->translationsPath]));
+        $this->logger->notice('Loading existing catalogues from "{translationsPath}"', ['translationsPath' => $this->translationsPath]);
         $currentCatalogue = new MessageCatalogue($targetLocale);
         $this->translationLoader->loadMessages($this->translationsPath, $currentCatalogue);
 
-        $operation = new DiffOperation($currentCatalogue, $extractedCatalogue);
+        $operation = new DiffOperation($extractedCatalogue, $currentCatalogue);
 
         // Exit if no messages found.
         if (0 === count($operation->getDomains())) {
-            $this->logger->warning(strtr('No translation found for locale {locale}', ['{locale}' => $targetLocale]));
+            $this->logger->warning('No translation found for locale {locale}', ['locale' => $targetLocale]);
 
             return;
         }
 
-        $this->logger->notice(strtr('Writing translation file for locale "{locale}".', ['{locale}' => $targetLocale]));
+        $this->logger->notice('Writing translation file for locale "{locale}".', ['locale' => $targetLocale]);
         $this->translationWriter->writeTranslations($operation->getResult(), $this->outputFormat, ['path' => $this->translationsPath]);
     }
 
