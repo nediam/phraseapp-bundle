@@ -14,7 +14,6 @@ use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
-use Symfony\Component\Translation\Catalogue\DiffOperation;
 use Symfony\Component\Translation\MessageCatalogue;
 use Symfony\Component\Translation\Writer\TranslationWriter;
 
@@ -176,22 +175,15 @@ class PhraseApp implements LoggerAwareInterface
         $extractedCatalogue = new MessageCatalogue($targetLocale);
         $this->translationLoader->loadMessages($this->getTmpPath(), $extractedCatalogue);
 
-        // load any existing messages from the translation files
-        $this->logger->notice('Loading existing catalogues from "{translationsPath}"', ['translationsPath' => $this->translationsPath]);
-        $currentCatalogue = new MessageCatalogue($targetLocale);
-        $this->translationLoader->loadMessages($this->translationsPath, $currentCatalogue);
-
-        $operation = new DiffOperation($extractedCatalogue, $currentCatalogue);
-
         // Exit if no messages found.
-        if (0 === count($operation->getDomains())) {
+        if (0 === count($extractedCatalogue->getDomains())) {
             $this->logger->warning('No translation found for locale {locale}', ['locale' => $targetLocale]);
 
             return;
         }
 
         $this->logger->notice('Writing translation file for locale "{locale}".', ['locale' => $targetLocale]);
-        $this->translationWriter->writeTranslations($operation->getResult(), $this->outputFormat, ['path' => $this->translationsPath]);
+        $this->translationWriter->writeTranslations($extractedCatalogue, $this->outputFormat, ['path' => $this->translationsPath]);
     }
 
     /**
