@@ -59,6 +59,10 @@ class PhraseApp implements LoggerAwareInterface
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var array
+     */
+    private $catalogues;
 
     /**
      * PhraseApp constructor.
@@ -78,6 +82,7 @@ class PhraseApp implements LoggerAwareInterface
         $this->locales           = $config['locales'];
         $this->outputFormat      = $config['output_format'];
         $this->translationsPath  = $config['translations_path'];
+        $this->catalogues        = $config['catalogues'];
         $this->logger            = $logger;
     }
 
@@ -122,12 +127,13 @@ class PhraseApp implements LoggerAwareInterface
      *
      * @return array|string
      */
-    protected function makeDownloadRequest($locale, $format)
+    protected function makeDownloadRequest($locale, $format, $tag)
     {
         $response = $this->client->request('locale.download', [
             'project_id'  => $this->projectId,
             'id'          => $locale,
             'file_format' => $format,
+            'tag'         => $tag,
         ]);
 
         return $response['text']->getContents();
@@ -141,15 +147,20 @@ class PhraseApp implements LoggerAwareInterface
     protected function downloadLocale($targetLocale)
     {
         $sourceLocale = $this->locales[$targetLocale];
-        $tmpFile      = $this->getTmpPath() . '/' . 'messages.' . $targetLocale . '.yml';
+
 
         if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
             $this->logger->notice('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
                 'targetLocale' => $targetLocale,
                 'sourceLocale' => $sourceLocale
             ]);
-            // Make copy because operated catalogues must belong to the same locale
-            copy($this->downloadedLocales[$sourceLocale], $tmpFile);
+
+            foreach ($this->catalogues as $catalogueName => $tagName) {
+                $tmpFile = sprintf('%s/%s.%s.yml', $this->getTmpPath(), $catalogueName, $targetLocale);
+
+                // Make copy because operated catalogues must belong to the same locale
+                copy($this->downloadedLocales[$sourceLocale][$catalogueName], $tmpFile);
+            }
 
             return $this->downloadedLocales[$sourceLocale];
         }
@@ -158,9 +169,19 @@ class PhraseApp implements LoggerAwareInterface
             'targetLocale' => $targetLocale,
             'sourceLocale' => $sourceLocale
         ]);
-        $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'yml_symfony2');
-        file_put_contents($tmpFile, $phraseAppMessage);
-        $this->downloadedLocales[$sourceLocale] = $tmpFile;
+
+        foreach ($this->catalogues as $catalogueName => $tagName) {
+
+            $this->logger->notice('Downloading catalogue "{catalogueName}" by tag "{tagName}".', [
+                'catalogueName' => $catalogueName,
+                'tagName'       => $tagName
+            ]);
+
+            $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'yml_symfony2', $tagName);
+            $tmpFile = sprintf('%s/%s.%s.yml', $this->getTmpPath(), $catalogueName, $targetLocale);
+            file_put_contents($tmpFile, $phraseAppMessage);
+            $this->downloadedLocales[$sourceLocale][$catalogueName] = $tmpFile;
+        }
 
         return $this->downloadedLocales[$sourceLocale];
     }
@@ -229,7 +250,7 @@ class PhraseApp implements LoggerAwareInterface
     protected function cleanUp()
     {
         $finder = new Finder();
-        $files  = $finder->files()->name('messages.*.yml')->in($this->getTmpPath());
+        $files  = $finder->files()->name('*.*.yml')->in($this->getTmpPath());
         /** @var SplFileInfo $file */
         foreach ($files as $file) {
             if (false === @unlink($file)) {

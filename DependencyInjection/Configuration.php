@@ -28,7 +28,7 @@ class Configuration implements ConfigurationInterface
                 ->defaultValue('yml')
             ->end()
             ->scalarNode('translations_path')->isRequired()->end()
-            ->arrayNode('translations')
+            ->arrayNode('catalogues')
                 ->prototype('scalar')->end()
             ->end()
             ->arrayNode('locales')
