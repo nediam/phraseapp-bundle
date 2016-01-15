@@ -15,6 +15,11 @@
             <argument id="translation.writer" type="service"/>
             <argument>%phrase_app.config%</argument>
             <argument id="logger" type="service" on-invalid="null"/>
+            <argument id="event_dispatcher" type="service"/>
+            <argument id="phrase_app.file_merger" type="service"/>
+        </service>
+
+        <service id="phrase_app.file_merger" class="nediam\PhraseAppBundle\Service\FileMerger" lazy="true">
         </service>
     </services>
 
