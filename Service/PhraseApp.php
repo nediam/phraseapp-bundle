@@ -186,7 +186,7 @@ class PhraseApp implements LoggerAwareInterface
 
         foreach ($this->catalogues as $catalogueName => $catalogueConfig) {
             $tags      = $catalogueConfig['tags'];
-            $tempFiles = [];
+            $tempData  = [];
             $extension = $catalogueConfig['output_format'];
             $path      = $catalogueConfig['path'] ?: $this->translationsPath;
 
@@ -208,7 +208,7 @@ class PhraseApp implements LoggerAwareInterface
 
             if ($postDownloadEvent->getFinalFilePath() !== null) {
                 // case when listeners manage the creation of file
-                $finalFile = $postDownloadEvent->getFinalFilePath();
+                continue;
             } else {
                 $tempContent = [];
 
