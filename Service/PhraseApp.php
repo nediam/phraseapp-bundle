@@ -6,12 +6,14 @@
 
 namespace nediam\PhraseAppBundle\Service;
 
-
 use nediam\PhraseApp\PhraseAppClient;
+use nediam\PhraseAppBundle\Events\PhraseappEvents;
+use nediam\PhraseAppBundle\Events\PostDownloadEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\Translation\MessageCatalogue;
@@ -23,57 +25,82 @@ class PhraseApp implements LoggerAwareInterface
      * @var PhraseAppClient
      */
     private $client;
+
     /**
      * @var TranslationLoader
      */
     private $translationLoader;
+
     /**
      * @var TranslationWriter
      */
     private $translationWriter;
+
     /**
      * @var string
      */
     private $projectId;
+
     /**
      * @var array
      */
     private $locales;
+
     /**
      * @var string
      */
     private $tmpPath;
+
     /**
      * @var string
      */
     private $translationsPath;
+
     /**
      * @var string
      */
     private $outputFormat;
+
     /**
      * @var array
      */
     private $downloadedLocales = [];
+
     /**
      * @var LoggerInterface
      */
     private $logger;
+
     /**
      * @var array
      */
     private $catalogues;
 
     /**
-     * PhraseApp constructor.
-     *
-     * @param PhraseAppClient   $client
-     * @param TranslationLoader $translationLoader
-     * @param TranslationWriter $translationWriter
-     * @param LoggerInterface   $logger
-     * @param array             $config
+     * @var array
      */
-    public function __construct(PhraseAppClient $client, TranslationLoader $translationLoader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null)
+    private $nestedCatalogues;
+
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $eventDispatcher;
+
+    /**
+     * @var FileMerger
+     */
+    private $fileMerger;
+
+    /**
+     * @param PhraseAppClient          $client
+     * @param TranslationLoader        $translationLoader
+     * @param TranslationWriter        $translationWriter
+     * @param array                    $config
+     * @param LoggerInterface|null     $logger
+     * @param EventDispatcherInterface $eventDispatcher
+     * @param FileMerger               $fileMerger
+     */
+    public function __construct(PhraseAppClient $client, TranslationLoader $translationLoader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null, EventDispatcherInterface $eventDispatcher, FileMerger $fileMerger)
     {
         $this->client            = $client;
         $this->translationLoader = $translationLoader;
@@ -83,7 +110,10 @@ class PhraseApp implements LoggerAwareInterface
         $this->outputFormat      = $config['output_format'];
         $this->translationsPath  = $config['translations_path'];
         $this->catalogues        = $config['catalogues'];
+        $this->nestedCatalogues  = $config['nested_catalogues'];
         $this->logger            = $logger;
+        $this->eventDispatcher   = $eventDispatcher;
+        $this->fileMerger        = $fileMerger;
     }
 
     /**
@@ -114,11 +144,92 @@ class PhraseApp implements LoggerAwareInterface
 
     /**
      * Get Locales
+     *
      * @return array
      */
     public function getLocales()
     {
         return $this->locales;
+    }
+
+    /**
+     * @param string $targetLocale
+     *
+     * @return string
+     */
+    protected function downloadLocale($targetLocale)
+    {
+        $sourceLocale = $this->locales[$targetLocale];
+
+        if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
+            $this->logger->notice('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
+                'targetLocale' => $targetLocale,
+                'sourceLocale' => $sourceLocale
+            ]);
+
+            foreach ($this->catalogues as $catalogueName => $catalogueConfig) {
+                $extension = $catalogueConfig['output_format'];
+
+                $tmpFile = sprintf('%s/%s.%s.%s', $this->getTmpPath(), $catalogueName, $targetLocale, $extension);
+
+                // Make copy because operated catalogues must belong to the same locale
+                copy($this->downloadedLocales[$sourceLocale][$catalogueName], $tmpFile);
+            }
+
+            return $this->downloadedLocales[$sourceLocale];
+        }
+
+        $this->logger->notice('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
+            'targetLocale' => $targetLocale,
+            'sourceLocale' => $sourceLocale
+        ]);
+
+        foreach ($this->catalogues as $catalogueName => $catalogueConfig) {
+            $tags      = $catalogueConfig['tags'];
+            $tempData  = [];
+            $extension = $catalogueConfig['output_format'];
+            $path      = $catalogueConfig['path'] ?: $this->translationsPath;
+
+            foreach ($tags as $tag) {
+                $tempPath = $this->getTmpPath();
+
+                $this->logger->notice('Downloading catalogue "{catalogueName}" by tag "{tagName}".', [
+                    'catalogueName' => $catalogueName,
+                    'tagName'       => $tag
+                ]);
+
+                $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'simple_json', $tag);
+
+                $tempData[$tag] = $phraseAppMessage;
+            }
+
+            $postDownloadEvent = new PostDownloadEvent($tempData, $targetLocale, $catalogueName);
+            $this->eventDispatcher->dispatch(PhraseappEvents::POST_DOWNLOAD, $postDownloadEvent);
+
+            if ($postDownloadEvent->getFinalFilePath() !== null) {
+                // case when listeners manage the creation of file
+                continue;
+            } else {
+                $tempContent = [];
+
+                foreach($postDownloadEvent->getTempData() as $data) {
+                    $tempContent[] = $data;
+                }
+
+                $this->logger->notice('Merging files for format {format}', [
+                    'format' => $extension
+                ]);
+
+                $mergedContent = $this->fileMerger->merge($tempContent, $extension);
+
+                $finalFile = sprintf('%s/%s.%s.%s', $this->getTmpPath(), $catalogueName, $targetLocale, $extension);
+                file_put_contents($finalFile, $mergedContent);
+            }
+
+            $this->downloadedLocales[$sourceLocale][$catalogueName] = $finalFile;
+        }
+
+        return $this->downloadedLocales[$sourceLocale];
     }
 
     /**
@@ -137,53 +248,6 @@ class PhraseApp implements LoggerAwareInterface
         ]);
 
         return $response['text']->getContents();
-    }
-
-    /**
-     * @param string $targetLocale
-     *
-     * @return string
-     */
-    protected function downloadLocale($targetLocale)
-    {
-        $sourceLocale = $this->locales[$targetLocale];
-
-
-        if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
-            $this->logger->notice('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
-                'targetLocale' => $targetLocale,
-                'sourceLocale' => $sourceLocale
-            ]);
-
-            foreach ($this->catalogues as $catalogueName => $tagName) {
-                $tmpFile = sprintf('%s/%s.%s.yml', $this->getTmpPath(), $catalogueName, $targetLocale);
-
-                // Make copy because operated catalogues must belong to the same locale
-                copy($this->downloadedLocales[$sourceLocale][$catalogueName], $tmpFile);
-            }
-
-            return $this->downloadedLocales[$sourceLocale];
-        }
-
-        $this->logger->notice('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
-            'targetLocale' => $targetLocale,
-            'sourceLocale' => $sourceLocale
-        ]);
-
-        foreach ($this->catalogues as $catalogueName => $tagName) {
-
-            $this->logger->notice('Downloading catalogue "{catalogueName}" by tag "{tagName}".', [
-                'catalogueName' => $catalogueName,
-                'tagName'       => $tagName
-            ]);
-
-            $phraseAppMessage = $this->makeDownloadRequest($sourceLocale, 'yml_symfony2', $tagName);
-            $tmpFile = sprintf('%s/%s.%s.yml', $this->getTmpPath(), $catalogueName, $targetLocale);
-            file_put_contents($tmpFile, $phraseAppMessage);
-            $this->downloadedLocales[$sourceLocale][$catalogueName] = $tmpFile;
-        }
-
-        return $this->downloadedLocales[$sourceLocale];
     }
 
     /**
@@ -223,6 +287,7 @@ class PhraseApp implements LoggerAwareInterface
 
     /**
      * Get TmpPath
+     *
      * @return string
      */
     protected function getTmpPath()
