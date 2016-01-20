@@ -4,37 +4,37 @@ namespace nediam\PhraseAppBundle\Service\MergeStrategy;
 
 use Symfony\Component\Yaml\Dumper;
 
-class YamlMerger
+class YamlMerger implements MergeInterface
 {
-	/**
-	 * @param $format
-	 *
-	 * @return bool
-	 */
-	public function canMerge($format)
-	{
-		return 'yml' === $format;
-	}
+    /**
+     * @param $format
+     *
+     * @return bool
+     */
+    public function canMerge($format)
+    {
+        return 'yml' === $format;
+    }
 
-	/**
-	 * @param array $files
-	 *
-	 * @return string
-	 */
-	public function merge($content)
-	{
-		$yamlTempArray = [];
+    /**
+     * @param array $content
+     *
+     * @return string
+     */
+    public function merge(array $content)
+    {
+        $yamlTempArray = [];
 
-		foreach($content as $input) {
-			$input = json_decode($input, true);
+        foreach ($content as $input) {
+            $input = json_decode($input, true);
 
-			$yamlTempArray = array_merge($yamlTempArray, $input);
-		}
+            $yamlTempArray = array_merge($yamlTempArray, $input);
+        }
 
-		ksort($yamlTempArray);
+        ksort($yamlTempArray);
 
-		$dumper = new Dumper();
+        $dumper = new Dumper();
 
-		return $dumper->dump($yamlTempArray, 5);
-	}
+        return $dumper->dump($yamlTempArray, 5);
+    }
 }

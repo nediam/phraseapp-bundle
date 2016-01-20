@@ -77,11 +77,6 @@ class PhraseApp implements LoggerAwareInterface
     private $catalogues;
 
     /**
-     * @var array
-     */
-    private $nestedCatalogues;
-
-    /**
      * @var EventDispatcherInterface
      */
     private $eventDispatcher;
@@ -110,7 +105,6 @@ class PhraseApp implements LoggerAwareInterface
         $this->outputFormat      = $config['output_format'];
         $this->translationsPath  = $config['translations_path'];
         $this->catalogues        = $config['catalogues'];
-        $this->nestedCatalogues  = $config['nested_catalogues'];
         $this->logger            = $logger;
         $this->eventDispatcher   = $eventDispatcher;
         $this->fileMerger        = $fileMerger;
@@ -188,11 +182,8 @@ class PhraseApp implements LoggerAwareInterface
             $tags      = $catalogueConfig['tags'];
             $tempData  = [];
             $extension = $catalogueConfig['output_format'];
-            $path      = $catalogueConfig['path'] ?: $this->translationsPath;
 
             foreach ($tags as $tag) {
-                $tempPath = $this->getTmpPath();
-
                 $this->logger->notice('Downloading catalogue "{catalogueName}" by tag "{tagName}".', [
                     'catalogueName' => $catalogueName,
                     'tagName'       => $tag

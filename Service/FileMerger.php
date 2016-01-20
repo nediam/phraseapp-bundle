@@ -11,35 +11,33 @@ use nediam\PhraseAppBundle\Service\MergeStrategy\YamlMerger;
 
 class FileMerger
 {
-	/**
-	 * @var MergeInterface[]
-	 */
-	private $handlers = [];
+    /**
+     * @var MergeInterface[]
+     */
+    private $handlers = [];
 
-	/**
-	 * FileMerger constructor.
-	 *
-	 * @param array $adapters
-	 */
-	public function __construct()
-	{
-		$this->handlers[] = new YamlMerger();
-	}
+    /**
+     * FileMerger constructor.
+     */
+    public function __construct()
+    {
+        $this->handlers[] = new YamlMerger();
+    }
 
-	/**
-	 * @param $content
-	 * @param $format
-	 *
-	 * @return string
-	 */
-	public function merge($content, $format)
-	{
-		foreach ($this->handlers as $handler) {
-			if ($handler->canMerge($format)) {
-				return $handler->merge($content);
-			}
-		}
+    /**
+     * @param $content
+     * @param $format
+     *
+     * @return string
+     */
+    public function merge($content, $format)
+    {
+        foreach ($this->handlers as $handler) {
+            if ($handler->canMerge($format)) {
+                return $handler->merge($content);
+            }
+        }
 
-		throw new \InvalidArgumentException('No handler for requested format');
-	}
+        throw new \InvalidArgumentException('No handler for requested format');
+    }
 }
