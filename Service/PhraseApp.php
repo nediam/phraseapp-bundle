@@ -14,8 +14,6 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\Translation\MessageCatalogue;
 use Symfony\Component\Translation\Writer\TranslationWriter;
 
@@ -305,13 +303,14 @@ class PhraseApp implements LoggerAwareInterface
 
     protected function cleanUp()
     {
-        $finder = new Finder();
-        $files  = $finder->files()->name('*.*.yml')->in($this->getTmpPath());
-        /** @var SplFileInfo $file */
-        foreach ($files as $file) {
-            if (false === @unlink($file)) {
-                $this->logger->warning(strtr('Could not delete the translation file "{file}".', ['{file}' => $file]));
+        foreach ($this->downloadedLocales as $locale => $files) {
+            foreach ($files as $file) {
+                if (false === @unlink($file)) {
+                    $this->logger->warning(strtr('Could not delete the translation file "{file}".', ['{file}' => $file]));
+                }
             }
+
+            unset($this->downloadedLocales[$locale]);
         }
     }
 }
