@@ -65,6 +65,11 @@ class PhraseApp implements LoggerAwareInterface
     private $downloadedLocales = [];
 
     /**
+     * @var array
+     */
+    private $tagCache = [];
+
+    /**
      * @var LoggerInterface
      */
     private $logger;
@@ -106,6 +111,11 @@ class PhraseApp implements LoggerAwareInterface
         $this->logger            = $logger;
         $this->eventDispatcher   = $eventDispatcher;
         $this->fileMerger        = $fileMerger;
+    }
+
+    public function __destruct()
+    {
+        $this->cleanUp();
     }
 
     /**
@@ -151,25 +161,8 @@ class PhraseApp implements LoggerAwareInterface
      */
     protected function downloadLocale($targetLocale)
     {
+    
         $sourceLocale = $this->locales[$targetLocale];
-
-        if (true === array_key_exists($sourceLocale, $this->downloadedLocales)) {
-            $this->logger->notice('Copying translations for locale "{targetLocale}" from "{sourceLocale}".', [
-                'targetLocale' => $targetLocale,
-                'sourceLocale' => $sourceLocale
-            ]);
-
-            foreach ($this->catalogues as $catalogueName => $catalogueConfig) {
-                $extension = $catalogueConfig['output_format'];
-
-                $tmpFile = sprintf('%s/%s.%s.%s', $this->getTmpPath(), $catalogueName, $targetLocale, $extension);
-
-                // Make copy because operated catalogues must belong to the same locale
-                copy($this->downloadedLocales[$sourceLocale][$catalogueName], $tmpFile);
-            }
-
-            return $this->downloadedLocales[$sourceLocale];
-        }
 
         $this->logger->notice('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
             'targetLocale' => $targetLocale,
@@ -229,6 +222,10 @@ class PhraseApp implements LoggerAwareInterface
      */
     protected function makeDownloadRequest($locale, $format, $tag)
     {
+        if (array_key_exists($locale, $this->tagCache) && array_key_exists($tag, $this->tagCache[$locale])) {
+            return $this->tagCache[$locale][$tag];
+        }
+
         $response = $this->client->request('locale.download', [
             'project_id'  => $this->projectId,
             'id'          => $locale,
@@ -236,7 +233,11 @@ class PhraseApp implements LoggerAwareInterface
             'tag'         => $tag,
         ]);
 
-        return $response['text']->getContents();
+        $content = $response['text']->getContents();
+
+        $this->tagCache[$locale][$tag] = $content;
+
+        return $content;
     }
 
     /**
@@ -270,8 +271,6 @@ class PhraseApp implements LoggerAwareInterface
             $this->downloadLocale($locale);
             $this->dumpMessages($locale);
         }
-
-        $this->cleanUp();
     }
 
     /**
