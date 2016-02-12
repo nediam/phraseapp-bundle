@@ -90,6 +90,11 @@ class PhraseApp implements LoggerAwareInterface
     private $fileMerger;
 
     /**
+     * @var bool
+     */
+    private $backup = true;
+
+    /**
      * @param PhraseAppClient          $client
      * @param TranslationLoader        $translationLoader
      * @param TranslationWriter        $translationWriter
@@ -140,6 +145,18 @@ class PhraseApp implements LoggerAwareInterface
     public function setOutputFormat($outputFormat)
     {
         $this->outputFormat = $outputFormat;
+
+        return $this;
+    }
+
+    /**
+     * @param boolean $backup
+     *
+     * @return PhraseApp
+     */
+    public function setBackup($backup)
+    {
+        $this->backup = $backup;
 
         return $this;
     }
@@ -258,6 +275,11 @@ class PhraseApp implements LoggerAwareInterface
         }
 
         $this->logger->notice('Writing translation file for locale "{locale}".', ['locale' => $targetLocale]);
+
+        if (false === $this->backup) {
+            $this->translationWriter->disableBackup();
+        }
+
         $this->translationWriter->writeTranslations($extractedCatalogue, $this->outputFormat, ['path' => $this->translationsPath]);
     }
 
