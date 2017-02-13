@@ -1,7 +1,7 @@
 {
     "name": "nediam/phraseapp-bundle",
     "description": "Basic integration with phraseapp.com",
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "license": "MIT",
     "authors": [
         {
@@ -15,6 +15,6 @@
         }
     },
     "require": {
-        "nediam/phraseapp-lib": ">=1.2 <2.0.0"
+        "nediam/phraseapp-lib": "^2.0"
     }
 }
