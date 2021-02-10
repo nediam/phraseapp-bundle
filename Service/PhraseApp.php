@@ -12,9 +12,9 @@ use nediam\PhraseAppBundle\Events\PostDownloadEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
-use Symfony\Bundle\FrameworkBundle\Translation\TranslationLoader;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Translation\MessageCatalogue;
+use Symfony\Component\Translation\Reader\TranslationReader;
 use Symfony\Component\Translation\Writer\TranslationWriter;
 
 class PhraseApp implements LoggerAwareInterface
@@ -25,9 +25,9 @@ class PhraseApp implements LoggerAwareInterface
     private $client;
 
     /**
-     * @var TranslationLoader
+     * @var TranslationReader
      */
-    private $translationLoader;
+    private $translationReader;
 
     /**
      * @var TranslationWriter
@@ -96,17 +96,17 @@ class PhraseApp implements LoggerAwareInterface
 
     /**
      * @param PhraseAppClient          $client
-     * @param TranslationLoader        $translationLoader
+     * @param TranslationReader        $translationReader
      * @param TranslationWriter        $translationWriter
      * @param array                    $config
      * @param LoggerInterface|null     $logger
      * @param EventDispatcherInterface $eventDispatcher
      * @param FileMerger               $fileMerger
      */
-    public function __construct(PhraseAppClient $client, TranslationLoader $translationLoader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null, EventDispatcherInterface $eventDispatcher, FileMerger $fileMerger)
+    public function __construct(PhraseAppClient $client, TranslationReader $translationReader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null, EventDispatcherInterface $eventDispatcher, FileMerger $fileMerger)
     {
         $this->client            = $client;
-        $this->translationLoader = $translationLoader;
+        $this->translationReader = $translationReader;
         $this->translationWriter = $translationWriter;
         $this->projectId         = $config['project_id'];
         $this->locales           = $config['locales'];
@@ -178,7 +178,7 @@ class PhraseApp implements LoggerAwareInterface
      */
     protected function downloadLocale($targetLocale)
     {
-    
+
         $sourceLocale = $this->locales[$targetLocale];
 
         $this->logger->notice('Downloading translations for locale "{targetLocale}" from "{sourceLocale}".', [
@@ -203,7 +203,7 @@ class PhraseApp implements LoggerAwareInterface
             }
 
             $postDownloadEvent = new PostDownloadEvent($tempData, $targetLocale, $catalogueName);
-            $this->eventDispatcher->dispatch(PhraseappEvents::POST_DOWNLOAD, $postDownloadEvent);
+            $this->eventDispatcher->dispatch($postDownloadEvent, PhraseappEvents::POST_DOWNLOAD);
 
             if ($postDownloadEvent->getFinalFilePath() !== null) {
                 // case when listeners manage the creation of file
@@ -265,7 +265,7 @@ class PhraseApp implements LoggerAwareInterface
         // load downloaded messages
         $this->logger->notice('Loading downloaded catalogues from "{tmpPath}"', ['tmpPath' => $this->getTmpPath()]);
         $extractedCatalogue = new MessageCatalogue($targetLocale);
-        $this->translationLoader->loadMessages($this->getTmpPath(), $extractedCatalogue);
+        $this->translationReader->read($this->getTmpPath(), $extractedCatalogue);
 
         // Exit if no messages found.
         if (0 === count($extractedCatalogue->getDomains())) {
@@ -280,7 +280,7 @@ class PhraseApp implements LoggerAwareInterface
             $this->translationWriter->disableBackup();
         }
 
-        $this->translationWriter->writeTranslations($extractedCatalogue, $this->outputFormat, ['path' => $this->translationsPath]);
+        $this->translationWriter->write($extractedCatalogue, $this->outputFormat, ['path' => $this->translationsPath]);
     }
 
     /**

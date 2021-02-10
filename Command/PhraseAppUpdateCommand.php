@@ -10,13 +10,13 @@ namespace nediam\PhraseAppBundle\Command;
 use nediam\PhraseAppBundle\Service\PhraseApp;
 use Psr\Log\LogLevel;
 use RuntimeException;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class PhraseAppUpdateCommand extends ContainerAwareCommand
+class PhraseAppUpdateCommand extends Command
 {
     private $availableLocales;
     /** @var PhraseApp */
@@ -26,7 +26,12 @@ class PhraseAppUpdateCommand extends ContainerAwareCommand
     /** @var array */
     private $locales = [];
 
-    protected function configure()
+	public function setPhraseAppService(PhraseApp $phraseApp)
+	{
+		$this->phraseApp = $phraseApp;
+    }
+
+	protected function configure()
     {
         $this->setName('phraseapp:update')->addOption('locale', null, InputOption::VALUE_REQUIRED);
 
@@ -71,8 +76,6 @@ class PhraseAppUpdateCommand extends ContainerAwareCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $container              = $this->getContainer();
-        $this->phraseApp        = $container->get('phrase_app.service');
         $this->availableLocales = $this->phraseApp->getLocales();
 
         $this->phraseApp->setLogger(new ConsoleLogger($output, [

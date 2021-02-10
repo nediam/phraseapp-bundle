@@ -9,9 +9,16 @@
             <argument>%phrase_app.token%</argument>
         </service>
 
+        <service id="nediam_phrase_app.command.phrase_app_update_command" class="\nediam\PhraseAppBundle\Command\PhraseAppUpdateCommand">
+            <call method="setPhraseAppService">
+                <argument type="service" id="phrase_app.service" />
+            </call>
+            <tag name="console.command" />
+        </service>
+
         <service id="phrase_app.service" class="nediam\PhraseAppBundle\Service\PhraseApp">
             <argument id="phrase_app.client" type="service"/>
-            <argument id="translation.loader" type="service"/>
+            <argument id="translation.reader" type="service"/>
             <argument id="translation.writer" type="service"/>
             <argument>%phrase_app.config%</argument>
             <argument id="logger" type="service" on-invalid="null"/>
