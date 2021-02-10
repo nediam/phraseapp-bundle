@@ -1,7 +1,7 @@
 {
     "name": "nediam/phraseapp-bundle",
     "description": "Basic integration with phraseapp.com",
-    "minimum-stability": "stable",
+    "minimum-stability": "beta",
     "license": "MIT",
     "authors": [
         {
@@ -15,7 +15,7 @@
         }
     },
     "require": {
-        "nediam/phraseapp-lib": ">=1.2 <2.0.0",
+        "nediam/phraseapp-lib": "^2.0",
         "symfony/console": "^4.2,>=4.2.17",
         "psr/log": "^1.1",
         "symfony/dependency-injection": "^4.2,>=4.2.17",
