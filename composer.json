@@ -15,6 +15,13 @@
         }
     },
     "require": {
-        "nediam/phraseapp-lib": ">=1.2 <2.0.0"
+        "nediam/phraseapp-lib": ">=1.2 <2.0.0",
+        "symfony/console": "^4.2,>=4.2.17",
+        "psr/log": "^1.1",
+        "symfony/dependency-injection": "^4.2,>=4.2.17",
+        "symfony/config": "^4.2,>=4.2.17",
+        "symfony/event-dispatcher": "^4.2,>=4.2.17",
+        "symfony/translation": "^4.2,>=4.2.17",
+        "symfony/yaml": "^4.2,>=4.2.17"
     }
 }
