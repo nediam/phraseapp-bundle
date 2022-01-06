@@ -85,7 +85,7 @@ class PhraseApp implements LoggerAwareInterface
     private $eventDispatcher;
 
     /**
-     * @var FileMerger
+     * @var FileMergerInterface
      */
     private $fileMerger;
 
@@ -101,9 +101,9 @@ class PhraseApp implements LoggerAwareInterface
      * @param array                    $config
      * @param LoggerInterface|null     $logger
      * @param EventDispatcherInterface $eventDispatcher
-     * @param FileMerger               $fileMerger
+     * @param FileMergerInterface      $fileMerger
      */
-    public function __construct(PhraseAppClient $client, TranslationReader $translationReader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null, EventDispatcherInterface $eventDispatcher, FileMerger $fileMerger)
+    public function __construct(PhraseAppClient $client, TranslationReader $translationReader, TranslationWriter $translationWriter, array $config, LoggerInterface $logger = null, EventDispatcherInterface $eventDispatcher, FileMergerInterface $fileMerger)
     {
         $this->client            = $client;
         $this->translationReader = $translationReader;

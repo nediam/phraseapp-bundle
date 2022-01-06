@@ -9,7 +9,7 @@ namespace nediam\PhraseAppBundle\Service;
 use nediam\PhraseAppBundle\Service\MergeStrategy\MergeInterface;
 use nediam\PhraseAppBundle\Service\MergeStrategy\YamlMerger;
 
-class FileMerger
+class FileMerger implements FileMergerInterface
 {
     /**
      * @var MergeInterface[]
