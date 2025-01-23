@@ -18,6 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class PhraseAppUpdateCommand extends Command
 {
+    private const RESULT_SUCCESS = 0;
+
     private $availableLocales;
     /** @var PhraseApp */
     private $phraseApp;
@@ -26,12 +28,12 @@ class PhraseAppUpdateCommand extends Command
     /** @var array */
     private $locales = [];
 
-	public function setPhraseAppService(PhraseApp $phraseApp)
+	public function setPhraseAppService(PhraseApp $phraseApp): void
 	{
 		$this->phraseApp = $phraseApp;
     }
 
-	protected function configure()
+	protected function configure(): void
     {
         $this->setName('phraseapp:update')->addOption('locale', null, InputOption::VALUE_REQUIRED);
 
@@ -46,7 +48,7 @@ class PhraseAppUpdateCommand extends Command
     /**
      * {@inheritdoc}
      */
-    protected function initialize(InputInterface $input, OutputInterface $output)
+    protected function initialize(InputInterface $input, OutputInterface $output): void
     {
         foreach ($input->getOptions() as $key => $option) {
             if (array_key_exists($key, $this->validators)) {
@@ -65,7 +67,7 @@ class PhraseAppUpdateCommand extends Command
      *
      * @throws \Exception
      */
-    protected function addOptionValidator($name, $validator)
+    protected function addOptionValidator($name, $validator): void
     {
         if (!is_callable($validator)) {
             throw new \Exception('Validator is not callable');
@@ -74,7 +76,7 @@ class PhraseAppUpdateCommand extends Command
         $this->validators[$name] = $validator;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->availableLocales = $this->phraseApp->getLocales();
 
@@ -99,5 +101,7 @@ class PhraseAppUpdateCommand extends Command
 
         // fetch and save translations
         $this->phraseApp->process($this->locales);
+
+        return self::RESULT_SUCCESS;
     }
 }
